@@ -1,0 +1,1 @@
+# [Arkansas](https://github.com/rkusa/Arkansas)' CouchDB Adapter [![Build Status](https://secure.travis-ci.org/rkusa/arkansas-couchdb.png)](http://travis-ci.org/rkusa/arkansas-couchdb)
