@@ -1,0 +1,24 @@
+{
+  "name": "arkansas-couchdb",
+  "author": {
+    "name": "Markus Ast",
+    "email": "npm.m@rkusa.st"
+  },
+  "version": "0.1.0",
+  "homepage": "https://github.com/rkusa/arkansas-couchdb",
+  "scripts": {
+    "test": "mocha"
+  },
+  "dependencies": {
+    "nano": "3.3.x"
+  },
+  "devDependencies": {
+    "mocha": "1.5.x",
+    "should": "1.2.x"
+  },
+  "bugs": "https://github.com/rkusa/arkansas-couchdb/issues",
+  "repository" : {
+    "type": "git",
+    "url": "git://github.com/rkusa/arkansas-couchdb.git"
+  }
+}
