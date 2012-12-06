@@ -15,7 +15,7 @@
   "devDependencies": {
     "mocha": "1.5.x",
     "should": "1.2.x",
-    "arkansas": "0.1.x"
+    "arkansas": "0.2.x"
   },
   "bugs": "https://github.com/rkusa/arkansas-couchdb/issues",
   "repository" : {

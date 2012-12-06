@@ -26,7 +26,10 @@ exports.initialize = function(name, opts, cb) {
   model.get = function(id, callback) {
     if (!callback) callback = function() {}
     db.get(id, function(err, body) {
-      if (err) return callback(err)
+      if (err) {
+        if (err.message === 'missing') return callback(null, null)
+        else return callback(err)
+      }
       var row = new model(body)
       row.isNew = false
       callback(null, row)
