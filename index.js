@@ -25,10 +25,16 @@ exports.initialize = function(name, opts, cb) {
   }
   model.get = function(id, callback) {
     if (!callback) callback = function() {}
+    if (!id) return callback(null, null)
     db.get(id, function(err, body) {
       if (err) {
-        if (err.message === 'missing') return callback(null, null)
-        else return callback(err)
+        switch (err.message) {
+          case 'missing':
+          case 'deleted':
+            return callback(null, null)
+          default:
+            return callback(err)
+        }
       }
       var row = new model(body)
       row.isNew = false
