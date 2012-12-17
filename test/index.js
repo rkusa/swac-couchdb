@@ -1,9 +1,13 @@
 var Arkansas = require('arkansas')
+  , app = new Arkansas.State
   , should   = require('should')
   , nano     = require('nano')('http://localhost:5984')
   , db, model
 
 describe('Arkansas CouchDB Adapter', function() {
+  var view = function(doc) {
+    if (doc.$type === 'TestModel') emit(doc.key, doc);
+  }
   before(function(done) {
     nano.db.create('arkansas-couchdb-test', function(err) {
       if (err) return done(err)
@@ -17,7 +21,11 @@ describe('Arkansas CouchDB Adapter', function() {
   describe('Model Definition', function() {
     before(function(done) {
       model = Arkansas.Model.define('TestModel', function() {
-        this.use(require('../'), { db: 'arkansas-couchdb-test' })
+        this.use(require('../'), { db: 'arkansas-couchdb-test' }, function() {
+          this.view('by-key', {
+            map: view
+          })
+        })
         this.property('key')
         this.property('type')
       }, done)
@@ -32,10 +40,10 @@ describe('Arkansas CouchDB Adapter', function() {
   describe('CRUD', function() {
     var cur
     it('POST should work', function(done) {
-      model.post({ key: '1', type: 'a' }, function(err, row) {
+      app.post(model, { key: '1', type: 'a' }, function(err, row) {
         should.not.exist(err)
         cur = row
-        db.get(row._id, function(err, body) {
+        db.get(row.id, function(err, body) {
           if (err) throw err
           body.key.should.equal(row.key)
           body.type.should.equal(row.type)
@@ -46,9 +54,9 @@ describe('Arkansas CouchDB Adapter', function() {
     it('PUT should work', function(done) {
       cur.key = 2
       cur.type = 'b'
-      model.put(cur._id, cur, function(err, row) {
+      app.put(model, cur.id, cur, function(err, row) {
         should.not.exist(err)
-        db.get(row._id, function(err, body) {
+        db.get(row.id, function(err, body) {
           if (err) throw err
           body.key.should.equal(cur.key)
           body.type.should.equal(cur.type)
@@ -57,17 +65,18 @@ describe('Arkansas CouchDB Adapter', function() {
       })
     })
     it('GET should work', function(done) {
-      model.get(cur._id, function(err, body) {
+      app.get(model, cur.id, function(err, body) {
         should.not.exist(err)
+        body.id.should.equal(cur.id)
         body.key.should.equal(cur.key)
         body.type.should.equal(cur.type)
         done()
       })
     })
     it('LIST should work', function(done) {
-      model.post({ key: '1', type: 'a' }, function(err, row) {
+      app.post(model, { key: '1', type: 'a' }, function(err, row) {
         should.not.exist(err)
-        model.list(function(err, items) {
+        app.list(model, function(err, items) {
           if (err) throw err
           items.should.have.lengthOf(2)
           done()
@@ -76,21 +85,16 @@ describe('Arkansas CouchDB Adapter', function() {
     })
   })
   describe('Views', function() {
-    before(function(done) {
+    it('should be created', function(done) {
       db.get('_design/TestModel', function(err, body) {
-        if (err) throw err
         should.not.exist(err)
-        body.views.byKey = {
-          map: "function (doc) { if(doc.$type === 'TestModel') emit(doc.key, doc); }"
-        }
-        db.insert(body, '_design/TestModel', function(err) {
-          if (err) throw err
-          done()
-        })
+        body.views.should.have.property('by-key')
+        body.views['by-key'].map.should.equal(view.toString())
+        done()
       })
     })
     it('should work', function(done) {
-      model.list('byKey', 2, function(err, items) {
+      app.list(model, 'by-key', 2, function(err, items) {
         should.not.exist(err)
         items.should.have.lengthOf(1)
         done()

@@ -1,10 +1,49 @@
 var nano = require('nano')(process.env.CLOUDANT_URL || 'http://localhost:5984')
 
-exports.initialize = function(name, opts, cb) {
-  var db = nano.use(opts.db)
-    , model = this
+var Definition = function(db, design, define, callback) {
+  this.db = db
+  this.design = design
+  this.queue = []
+  this.callback = function() {
+    if (this.queue.length === 0) {
+      if (callback) callback()
+    } else {
+      (this.queue.shift())()
+    }
+  }
+  if (define) define.call(this)
+  if (this.queue.length > 0) (this.queue.shift())()
+}
 
-  model.list = function(/*view, key, callback*/) {
+Definition.prototype.view = function(name, view) {
+  var that = this
+
+  this.queue.push(function() {
+    that.db.get(that.design, function(err, body) {
+      if (err) {
+        if (err.status_code !== 404) throw err
+        else {
+          body = {
+            language: 'javascript',
+            views: {}
+          }
+        }
+      }
+      body.views[name] = !view.map ? { map: view } : view
+      that.db.insert(body, that.design, that.callback.bind(that))
+    })
+  })
+}
+
+exports.initialize = function(model, opts, define, cb) {
+  var db = nano.use(opts.db)
+    , api = {}
+    , definition = new Definition(db, '_design/' + model._type, define, cb)
+  definition.view('all', {
+    map: "function (doc) { if(doc.$type === '" + model._type + "') emit(null, doc); }"
+  })
+
+  api.list = function(/*view, key, callback*/) {
     var args = Array.prototype.slice.call(arguments)
       , callback = args.pop()
       , view = args.shift() || 'all'
@@ -16,6 +55,10 @@ exports.initialize = function(name, opts, cb) {
       if (err) return callback(err)
       var rows = []
       body.rows.forEach(function(data) {
+        data.value._id = data.id
+        data.value.id = data.id.indexOf(model._type) === 0
+                        ? data.id.substr(model._type.length + 1)
+                        : data.id
         var row = new model(data.value)
         row.isNew = false
         rows.push(row)
@@ -23,9 +66,10 @@ exports.initialize = function(name, opts, cb) {
       callback(null, rows)
     })
   }
-  model.get = function(id, callback) {
+  api.get = function(id, callback) {
     if (!callback) callback = function() {}
     if (!id) return callback(null, null)
+    if (!id.match(/^[a-z0-9]{32}$/)) id = model._type + '/' + id
     db.get(id, function(err, body) {
       if (err) {
         switch (err.message) {
@@ -36,50 +80,58 @@ exports.initialize = function(name, opts, cb) {
             return callback(err)
         }
       }
+      body.id = body._id.indexOf(model._type) === 0
+                  ? body._id.substr(model._type.length + 1)
+                  : body._id
       var row = new model(body)
       row.isNew = false
       callback(null, row)
     })
   }
-  model.put = function(id, props, callback) {
+  api.put = function(id, props, callback) {
     if (!callback) callback = function() {}
+    if (!id.match(/^[a-z0-9]{32}$/)) id = model._type + '/' + id
     db.get(id, function(err, body) {
       if (err) return callback(err)
+      body.id = body._id.indexOf(model._type) === 0
+                  ? body._id.substr(model._type.length + 1)
+                  : body._id
       var row = new model(body)
       row.isNew = false
-      Object.keys(props).forEach(function(key) {
-        if (row.hasOwnProperty(key)) row[key] = props[key]
-      })
-      row._rev = body._rev
-      row.$type = name
-      db.insert(row, row._id, function(err) {
+      row.updateAttributes(props)
+      var data = row.toJSON()
+      data._id = body._id
+      delete data.id
+      data._rev = body._rev
+      data.$type = model._type
+      db.insert(data, data.id, function(err) {
         if (err) return callback(err)
         callback(null, row)
       })
     })
-
   }
-  model.post = function(props, callback) {
+  api.post = function(props, callback) {
     if (!callback) callback = function() {}
     if (props instanceof model) {
-      var row = props
-      props = {}
-      Object.keys(row).forEach(function(key) {
-        props[key] = row[key]
-      })
+      props = props.toJSON()
     }
-    if (!props._id) delete props._id
-    props.$type = name
+    if (props.id) props._id = model._type + '/' + props.id
+    delete props.id
+    props.$type = model._type
     db.insert(props, props._id, function(err, body) {
       if (err) return callback(err)
+      props._id = body.id
+      props.id = body.id.indexOf(model._type) === 0
+                  ? body.id.substr(model._type.length + 1)
+                  : body.id
       var row = new model(props)
-      row._id = body.id
       row.isNew = false
       callback(null, row)
     })
   }
-  model.delete = function(id, callback) {
+  api.delete = function(id, callback) {
     if (!callback) callback = function() {}
+    if (!id.match(/^[a-z0-9]{32}$/)) id = model._type + '/' + id
     db.get(id, function(err, body) {
       if (err) return callback(err)
 
@@ -90,18 +142,5 @@ exports.initialize = function(name, opts, cb) {
     })
   }
 
-  db.head('_design/' + name, function(err, _, headers) {
-    if (err) {
-      db.insert({
-        language: 'javascript',
-        views: {
-          all: {
-            map: "function (doc) { if(doc.$type === '" + name + "') emit(null, doc); }"
-          }
-        }
-      }, '_design/' + name, cb)
-    } else {
-      if (cb) cb()
-    }
-  })
+  return api
 }
