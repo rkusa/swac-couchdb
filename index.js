@@ -4,6 +4,7 @@ var Definition = function(db, design, define, callback) {
   this.db = db
   this.design = design
   this.queue = []
+  this.views = {}
   this.callback = function() {
     if (this.queue.length === 0) {
       if (callback) callback()
@@ -21,21 +22,26 @@ var Definition = function(db, design, define, callback) {
 Definition.prototype.view = function(name, view) {
   var that = this
 
-  this.queue.push(function() {
-    that.db.get(that.design, function(err, body) {
-      if (err) {
-        if (err.status_code !== 404) throw err
-        else {
-          body = {
-            language: 'javascript',
-            views: {}
+  if (typeof view === 'function') {
+    this.views[name] = view
+    this.callback()
+  } else {
+    this.queue.push(function() {
+      that.db.get(that.design, function(err, body) {
+        if (err) {
+          if (err.status_code !== 404) throw err
+          else {
+            body = {
+              language: 'javascript',
+              views: {}
+            }
           }
         }
-      }
-      body.views[name] = !view.map ? { map: view } : view
-      that.db.insert(body, that.design, that.callback.bind(that))
+        body.views[name] = !view.map ? { map: view } : view
+        that.db.insert(body, that.design, that.callback.bind(that))
+      })
     })
-  })
+  }
 }
 
 exports.initialize = function(model, opts, define, cb) {
@@ -43,7 +49,7 @@ exports.initialize = function(model, opts, define, cb) {
     , api = {}
     , definition = new Definition(db, '_design/' + model._type, define, cb)
   definition.view('all', {
-    map: "function (doc) { if(doc.$type === '" + model._type + "') emit(null, doc); }"
+    map: "function (doc) { if(doc.$type === '" + model._type + "') emit(doc._id, null); }"
   })
 
   api.list = function(/*view, key, callback*/) {
@@ -51,18 +57,25 @@ exports.initialize = function(model, opts, define, cb) {
       , callback = args.pop()
       , view = args.shift() || 'all'
       , key = args.shift() || null
-      , params = {}
+      , params = { include_docs: true }
     if (key) params.key = key
     if (!callback) callback = function() {}
-    db.view(model._type, view, params, function(err, body) {
+
+    var fn
+    if (definition.views[view])
+      fn = definition.views[view].bind(db, key, process.domain.req)
+    else
+      fn = db.view.bind(db, model._type, view, params)
+
+    fn(function(err, body) {
       if (err) return callback(err)
       var rows = []
       body.rows.forEach(function(data) {
-        data.value._id = data.id
-        data.value.id = data.id.indexOf(model._type) === 0
+        data.doc._id = data.id
+        data.doc.id = data.id.indexOf(model._type) === 0
                         ? data.id.substr(model._type.length + 1)
                         : data.id
-        var row = new model(data.value)
+        var row = new model(data.doc)
         row.isNew = false
         rows.push(row)
       })

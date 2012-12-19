@@ -1,8 +1,17 @@
 var Arkansas = require('arkansas')
-  , app = new Arkansas.State
   , should   = require('should')
   , nano     = require('nano')('http://localhost:5984')
   , db, model
+
+var domain = require('domain')
+  , d = domain.create()
+d.req = {}
+
+var domainify = function(fn) {
+  return function(done) {
+    d.run(fn.bind(null, done))
+  }
+}
 
 describe('Arkansas CouchDB Adapter', function() {
   var view = function(doc) {
@@ -33,14 +42,14 @@ describe('Arkansas CouchDB Adapter', function() {
     it('should create a _design document', function() {
       db.get('_design/TestModel', function(err, body) {
         should.not.exist(err)
-        body.views.all.map.should.equal("function (doc) { if(doc.$type === 'TestModel') emit(null, doc); }")
+        body.views.all.map.should.equal("function (doc) { if(doc.$type === 'TestModel') emit(doc._id, null); }")
       })
     })
   })
   describe('CRUD', function() {
     var cur
-    it('POST should work', function(done) {
-      app.post(model, { key: '1', type: 'a' }, function(err, row) {
+    it('POST should work', domainify(function(done) {
+      model.post({ key: '1', type: 'a' }, function(err, row) {
         should.not.exist(err)
         cur = row
         db.get(row.id, function(err, body) {
@@ -50,11 +59,11 @@ describe('Arkansas CouchDB Adapter', function() {
           done()
         })
       })
-    })
-    it('PUT should work', function(done) {
+    }))
+    it('PUT should work', domainify(function(done) {
       cur.key = 2
       cur.type = 'b'
-      app.put(model, cur.id, cur, function(err, row) {
+      model.put(cur.id, cur, function(err, row) {
         should.not.exist(err)
         db.get(row.id, function(err, body) {
           if (err) throw err
@@ -63,26 +72,26 @@ describe('Arkansas CouchDB Adapter', function() {
           done()
         })
       })
-    })
-    it('GET should work', function(done) {
-      app.get(model, cur.id, function(err, body) {
+    }))
+    it('GET should work', domainify(function(done) {
+      model.get(cur.id, function(err, body) {
         should.not.exist(err)
         body.id.should.equal(cur.id)
         body.key.should.equal(cur.key)
         body.type.should.equal(cur.type)
         done()
       })
-    })
-    it('LIST should work', function(done) {
-      app.post(model, { key: '1', type: 'a' }, function(err, row) {
+    }))
+    it('LIST should work', domainify(function(done) {
+      model.post({ key: '1', type: 'a' }, function(err, row) {
         should.not.exist(err)
-        app.list(model, function(err, items) {
+        model.list(function(err, items) {
           if (err) throw err
           items.should.have.lengthOf(2)
           done()
         })
       })
-    })
+    }))
   })
   describe('Views', function() {
     it('should be created', function(done) {
@@ -93,12 +102,12 @@ describe('Arkansas CouchDB Adapter', function() {
         done()
       })
     })
-    it('should work', function(done) {
-      app.list(model, 'by-key', 2, function(err, items) {
+    it('should work', domainify(function(done) {
+      model.list('by-key', 2, function(err, items) {
         should.not.exist(err)
         items.should.have.lengthOf(1)
         done()
       })
-    })
+    }))
   })
 })
