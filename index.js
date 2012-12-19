@@ -12,7 +12,10 @@ var Definition = function(db, design, define, callback) {
     }
   }
   if (define) define.call(this)
-  if (this.queue.length > 0) (this.queue.shift())()
+  var that = this
+  process.nextTick(function() {
+    if (that.queue.length > 0) (that.queue.shift())()
+  })
 }
 
 Definition.prototype.view = function(name, view) {
