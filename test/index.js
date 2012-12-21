@@ -122,4 +122,73 @@ describe('Arkansas CouchDB Adapter', function() {
       })
     }))
   })
+  describe('CouchDB Document Id', function() {
+    var cur
+    it('should use the model type as namespace', function(done) {
+      model.post({ id: 'foobar' }, function(err, instance) {
+        should.not.exist(err)
+        cur = instance
+        instance.should.have.property('_id', model._type + '/foobar')
+        instance.should.have.property('id', 'foobar')
+        db.get(model._type + '/foobar', function(err, body) {
+          should.not.exist(err)
+          should.exist(body)
+          done()
+        })
+      })
+    })
+    it('adapt the id', function(done) {
+      model.get(cur.id, function(err, body) {
+        should.not.exist(err)
+        should.exist(body)
+        cur.id.should.eql(body.id)
+        done()
+      })
+    })
+  })
+  describe('CouchDB Document Revision', function() {
+    var cur
+    it('should extend the model\'s prototype', function() {
+      model.prototype.should.have.property('_rev')
+    })
+    it('should set the #_rev on POST', function(done) {
+      model.post({}, function(err, instance) {
+        should.not.exist(err)
+        cur = instance
+        instance.should.have.property('_rev')
+        db.get(cur._id, function(err, body) {
+          should.not.exist(err)
+          instance.should.have.property('_rev', body._rev)
+          done()
+        })
+      })
+    })
+    it('should set the #_rev on GET', function(done) {
+      model.get(cur._id, function(err, instance) {
+        should.not.exist(err)
+        instance.should.have.property('_rev', cur._rev)
+        done()
+      })
+    })
+    it('should set the #_rev on LIST', function(done) {
+      model.list(function(err, rows) {
+        should.not.exist(err)
+        rows.forEach(function(row) {
+          row.should.have.property('_rev')
+        })
+        done()
+      })
+    })
+    it('should update the #_rev on PUT', function(done) {
+      model.put(cur._id, { key: 42 }, function(err, updated) {
+        should.not.exist(err)
+        cur._rev.should.not.eql(updated._rev)
+        db.get(cur._id, function(err, body) {
+          should.not.exist(err)
+          updated._rev.should.eql(body._rev)
+          done()
+        })
+      })
+    })
+  })
 })
