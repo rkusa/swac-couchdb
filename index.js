@@ -24,8 +24,10 @@ API.prototype.view = function(name, view) {
   var that = this
 
   if (typeof view === 'function') {
-    this.views[name] = view
-    this.callback()
+    this.queue.push(function() {
+      that.views[name] = view
+      that.callback()
+    })
   } else {
     this.queue.push(function() {
       that.db.get(that.design, function(err, body) {
@@ -104,6 +106,8 @@ API.prototype.list = function(/*view, key, callback*/) {
 
   fn(function(err, body) {
     if (err) return callback(err, null)
+    if (!body || !body.rows || !Array.isArray(body.rows))
+      return callback(null, body || null)
     var rows = []
     body.rows.forEach(function(data) {
       rows.push(that.createModel(data.id, data.doc, data.doc._rev))

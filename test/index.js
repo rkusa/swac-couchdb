@@ -34,15 +34,19 @@ describe('Arkansas CouchDB Adapter', function() {
           this.view('by-key', {
             map: view
           })
+          this.view('by-fn', function(key, req, callback) {
+            callback(null, [key, req])
+          })
         })
         this.property('key')
         this.property('type')
       }, done)
     })
-    it('should create a _design document', function() {
+    it('should create a _design document', function(done) {
       db.get('_design/TestModel', function(err, body) {
         should.not.exist(err)
         body.views.all.map.should.equal("function (doc) { if(doc.$type === 'TestModel') emit(doc._id, null); }")
+        done()
       })
     })
   })
@@ -106,6 +110,14 @@ describe('Arkansas CouchDB Adapter', function() {
       model.list('by-key', 2, function(err, items) {
         should.not.exist(err)
         items.should.have.lengthOf(1)
+        done()
+      })
+    }))
+    it('should work with function type views', domainify(function(done) {
+      model.list('by-fn', 42, function(err, res) {
+        res.should.have.lengthOf(2)
+        res[0].should.eql(42)
+        res[1].should.eql(d.req)
         done()
       })
     }))
