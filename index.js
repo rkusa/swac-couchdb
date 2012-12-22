@@ -1,11 +1,12 @@
 var nano = require('nano')(process.env.CLOUDANT_URL || 'http://localhost:5984')
 
 var API = function(db, model, define, callback) {
-  this.db = db
-  this.model = model
+  this.db     = db
+  this.model  = model
   this.design = '_design/' + model._type
-  this.queue = []
-  this.views = {}
+  this.queue  = []
+  this.views  = {}
+  this.params = {}
   this.callback = function() {
     if (this.queue.length === 0) {
       if (callback) callback()
@@ -23,12 +24,15 @@ var API = function(db, model, define, callback) {
 API.prototype.view = function(name, view) {
   var that = this
 
+  this.params[name] = {}
   if (typeof view === 'function') {
     this.queue.push(function() {
       that.views[name] = view
       that.callback()
     })
   } else {
+    if (!view.reduce) this.params[name].include_docs = true
+    else this.params[name].reduce = true
     this.queue.push(function() {
       that.db.get(that.design, function(err, body) {
         if (err) {
@@ -93,11 +97,11 @@ API.prototype.list = function(/*view, key, callback*/) {
     , callback = args.pop()
     , view = args.shift() || 'all'
     , key = args.shift() || null
-    , params = { include_docs: true }
+    , params = this.params[view]
 
   if (key)       params.key = key
   if (!callback) callback = function() {}
-
+  
   var fn
   if (this.views[view])
     fn = this.views[view].bind(this.db, key, process.domain.req)
