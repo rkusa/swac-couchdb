@@ -114,7 +114,8 @@ API.prototype.list = function(/*view, key, callback*/) {
       return callback(null, body || null)
     var rows = []
     body.rows.forEach(function(data) {
-      rows.push(that.createModel(data.id, data.doc, data.doc._rev))
+      var doc = data.value || data.doc
+      rows.push(that.createModel(doc._id, doc, doc._rev))
     })
     callback(null, rows)
   })
@@ -138,7 +139,9 @@ API.prototype.put = function(instance, callback) {
 API.prototype.post = function(props, callback) {
   if (!callback) callback = function() {}
 
-  if (props instanceof this.model) props = props.toJSON(true)
+  var model = props instanceof this.model ? props : new this.model(props)
+  props = model.toJSON(true)
+
   if (props.id) props._id = this.model._type + '/' + props.id
   delete props.id
   props.$type = this.model._type
@@ -146,7 +149,11 @@ API.prototype.post = function(props, callback) {
   var that = this
   this.db.insert(props, props._id, function(err, body) {
     if (err) return callback(err, null)
-    callback(null, that.createModel(body.id, props, body.rev))
+    if (!model.id) model.id = body.id
+    model._id = body.id
+    model._rev = body.rev
+    model.isNew = false
+    callback(null, model)
   })
 }
 
