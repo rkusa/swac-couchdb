@@ -1,11 +1,11 @@
 {
-  "name": "arkansas-couchdb",
+  "name": "swac-couchdb",
   "author": {
     "name": "Markus Ast",
     "email": "npm.m@rkusa.st"
   },
   "version": "0.3.0",
-  "homepage": "https://github.com/rkusa/arkansas-couchdb",
+  "homepage": "https://github.com/rkusa/swac-couchdb",
   "scripts": {
     "test": "mocha"
   },
@@ -15,11 +15,11 @@
   "devDependencies": {
     "mocha": "1.5.x",
     "should": "1.2.x",
-    "arkansas": "0.3.x"
+    "swac": "0.3.x"
   },
-  "bugs": "https://github.com/rkusa/arkansas-couchdb/issues",
+  "bugs": "https://github.com/rkusa/swac-couchdb/issues",
   "repository" : {
     "type": "git",
-    "url": "git://github.com/rkusa/arkansas-couchdb.git"
+    "url": "git://github.com/rkusa/swac-couchdb.git"
   }
 }

@@ -1,6 +1,6 @@
-# [Arkansas](https://github.com/rkusa/Arkansas)' ![](https://dl.dropbox.com/u/6699613/arkansas-logo.png) CouchDB Adapter
+# [SWAC](https://github.com/rkusa/swac)' ![](https://dl.dropbox.com/u/6699613/swac-logo.png) CouchDB Adapter
 
-## Status [![Build Status](https://secure.travis-ci.org/rkusa/arkansas-couchdb.png)](http://travis-ci.org/rkusa/arkansas-couchdb)
+## Status [![Build Status](https://secure.travis-ci.org/rkusa/swac-couchdb.png)](http://travis-ci.org/rkusa/swac-couchdb)
 
 Don't use yet.
 

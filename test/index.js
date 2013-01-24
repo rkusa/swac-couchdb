@@ -1,4 +1,4 @@
-var Arkansas = require('arkansas')
+var swac = require('swac')
   , should   = require('should')
   , nano     = require('nano')('http://localhost:5984')
   , db, model
@@ -13,24 +13,24 @@ var domainify = function(fn) {
   }
 }
 
-describe('Arkansas CouchDB Adapter', function() {
+describe('SWAC CouchDB Adapter', function() {
   var view = function(doc) {
     if (doc.$type === 'TestModel') emit(doc.key, doc);
   }
   before(function(done) {
-    nano.db.create('arkansas-couchdb-test', function(err) {
+    nano.db.create('swac-couchdb-test', function(err) {
       if (err) return done(err)
-      db = nano.use('arkansas-couchdb-test')
+      db = nano.use('swac-couchdb-test')
       done()
     })
   })
   after(function(done) {
-    nano.db.destroy('arkansas-couchdb-test', done)
+    nano.db.destroy('swac-couchdb-test', done)
   })
   describe('Model Definition', function() {
     before(function(done) {
-      model = Arkansas.Model.define('TestModel', function() {
-        this.use(require('../'), { db: 'arkansas-couchdb-test' }, function() {
+      model = swac.Model.define('TestModel', function() {
+        this.use(require('../'), { db: 'swac-couchdb-test' }, function() {
           this.view('by-key', {
             map: view
           })
@@ -164,7 +164,7 @@ describe('Arkansas CouchDB Adapter', function() {
       })
     })
     it('should set the #_rev on GET', function(done) {
-      model.get(cur._id, function(err, instance) {
+      model.get(cur.id, function(err, instance) {
         should.not.exist(err)
         instance.should.have.property('_rev', cur._rev)
         done()
