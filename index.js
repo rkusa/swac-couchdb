@@ -15,10 +15,10 @@ var API = function(db, model, define, callback) {
     }
   }
   if (define) define.call(this)
-  var that = this
-  process.nextTick(function() {
-    if (that.queue.length > 0) (that.queue.shift())()
-  })
+}
+
+API.prototype.initialize = function() {
+  if (this.queue.length > 0) (this.queue.shift())()
 }
 
 API.prototype.view = function(name, view) {
@@ -98,6 +98,9 @@ API.prototype.list = function(/*view, key, callback*/) {
     , view = args.shift() || 'all'
     , key = args.shift() || null
     , params = this.params[view]
+  
+  if (params === undefined)
+    throw new Error('View ' + view + ' for ' + this.model._type + ' does not exsist')
 
   if (key)       params.key = key
   if (!callback) callback = function() {}
@@ -173,6 +176,8 @@ exports.initialize = function(model, opts, define, callback) {
   api.view('all', {
     map: "function (doc) { if(doc.$type === '" + model._type + "') emit(doc._id, null); }"
   })
+  
+  api.initialize()
 
   Object.defineProperties(model.prototype, {
     _id:  { value: null, writable: true },
