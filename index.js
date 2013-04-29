@@ -63,11 +63,12 @@ API.prototype.adaptId = function(id) {
 }
 
 API.prototype.createModel = function(id, data, rev) {
-  data.id        = this.extractId(id)
-  var instance   = new this.model(data)
-  instance._id   = id
-  instance._rev  = rev
-  instance.isNew = false
+  data.id               = this.extractId(id)
+  var instance          = new this.model(data)
+  instance._id          = id
+  instance._rev         = rev
+  instance._attachments = data._attachments
+  instance.isNew        = false
   return instance
 }
 
@@ -126,10 +127,11 @@ API.prototype.list = function(/*view, key, callback*/) {
 
 API.prototype.put = function(instance, callback) {
   if (!callback) callback = function() {}
-  var data   = instance.toJSON(true)
-  data._rev  = instance._rev
-  data._id   = instance._id
-  data.$type = instance._type
+  var data          = instance.toJSON(true)
+  data._rev         = instance._rev
+  data._id          = instance._id
+  data._attachments = instance._attachments
+  data.$type        = instance._type
   delete data.id
   this.db.insert(data, instance._id, function(err, res) {
     if (err) return callback(err, null)
@@ -180,8 +182,9 @@ exports.initialize = function(model, opts, define, callback) {
   api.initialize()
 
   Object.defineProperties(model.prototype, {
-    _id:  { value: null, writable: true },
-    _rev: { value: null, writable: true } 
+    _id:          { value: null, writable: true },
+    _rev:         { value: null, writable: true },
+    _attachments: { value: null, writable: true }
   })
 
   return api
