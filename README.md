@@ -1,8 +1,14 @@
 # [SWAC](https://github.com/rkusa/swac)' ![](https://dl.dropbox.com/u/6699613/swac-logo.png) CouchDB Adapter
+[![Build Status](https://secure.travis-ci.org/rkusa/swac-couchdb.png)](http://travis-ci.org/rkusa/swac-couchdb) [![Dependency Status](https://gemnasium.com/rkusa/swac-couchdb.png)](https://gemnasium.com/rkusa/swac-couchdb)
 
-## Status [![Build Status](https://secure.travis-ci.org/rkusa/swac-couchdb.png)](http://travis-ci.org/rkusa/swac-couchdb)
+```json
+{
+  "name": "swac-couchdb",
+  "version": "0.4.2"
+}
+```
 
-Don't use yet.
+**Status:** Don't use yet.
 
 ## Usage
 

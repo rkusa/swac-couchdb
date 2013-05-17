@@ -69,7 +69,7 @@ describe('SWAC CouchDB Adapter', function() {
       cur.type = 'b'
       model.put(cur.id, cur, function(err, row) {
         should.not.exist(err)
-        db.get(row.id, function(err, body) {
+        db.get(cur.id, function(err, body) {
           if (err) throw err
           body.key.should.equal(cur.key)
           body.type.should.equal(cur.type)

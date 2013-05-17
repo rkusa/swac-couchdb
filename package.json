@@ -4,7 +4,7 @@
     "name": "Markus Ast",
     "email": "npm.m@rkusa.st"
   },
-  "version": "0.4.1",
+  "version": "0.4.2",
   "homepage": "https://github.com/rkusa/swac-couchdb",
   "scripts": {
     "test": "mocha"
@@ -15,7 +15,7 @@
   "devDependencies": {
     "mocha": "1.5.x",
     "should": "1.2.x",
-    "swac": "0.4.x"
+    "swac": "0.6.x"
   },
   "bugs": "https://github.com/rkusa/swac-couchdb/issues",
   "repository" : {

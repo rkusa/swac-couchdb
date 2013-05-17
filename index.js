@@ -127,11 +127,12 @@ API.prototype.list = function(/*view, key, callback*/) {
 
 API.prototype.put = function(instance, callback) {
   if (!callback) callback = function() {}
-  var data          = instance.toJSON(true)
-  data._rev         = instance._rev
-  data._id          = instance._id
-  data._attachments = instance._attachments
-  data.$type        = instance._type
+  var data   = instance.toJSON(true)
+  data._rev  = instance._rev
+  data._id   = instance._id
+  data.$type = instance._type
+  if (instance._attachments !== null)
+    data._attachments = instance._attachments
   delete data.id
   this.db.insert(data, instance._id, function(err, res) {
     if (err) return callback(err, null)
