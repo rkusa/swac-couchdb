@@ -51,6 +51,27 @@ API.prototype.view = function(name, view) {
   }
 }
 
+API.prototype.filter = function(name, filter) {
+  var that = this
+
+  this.queue.push(function() {
+    that.db.get(that.design, function(err, body) {
+      if (err) {
+        if (err.status_code !== 404) throw err
+        else {
+          body = {
+            language: 'javascript',
+            filters: {}
+          }
+        }
+      }
+      if (!body.filters) body.filters = {}
+      body.filters[name] = filter.toString()
+      that.db.insert(body, that.design, that.callback.bind(that))
+    })
+  })
+}
+
 API.prototype.extractId = function(id) {
   return id.indexOf(this.model._type) === 0
     ? id.substr(this.model._type.length + 1)
@@ -58,7 +79,8 @@ API.prototype.extractId = function(id) {
 }
 
 API.prototype.adaptId = function(id) {
-  if (!id.match(/^[a-z0-9]{32}$/)) id = this.model._type + '/' + id
+  if (!id.match(/^[a-z0-9]{32}$/) && id.indexOf(this.model._type) === -1)
+    id = this.model._type + '/' + id
   return id
 }
 
