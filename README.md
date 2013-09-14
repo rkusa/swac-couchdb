@@ -2,10 +2,8 @@
 [![Build Status](https://secure.travis-ci.org/rkusa/swac-couchdb.png)](http://travis-ci.org/rkusa/swac-couchdb) [![Dependency Status](https://gemnasium.com/rkusa/swac-couchdb.png)](https://gemnasium.com/rkusa/swac-couchdb)
 
 ```json
-{
-  "name": "swac-couchdb",
-  "version": "0.4.2"
-}
+{ "name": "swac-couchdb",
+  "version": "0.4.3" }
 ```
 
 **Status:** Don't use yet.
