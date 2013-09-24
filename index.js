@@ -98,8 +98,14 @@ API.prototype.get = function(id, callback) {
   if (!callback) callback = function() {}
   if (!id) return callback(null, null)
 
-  var that = this
-  this.db.get(this.adaptId(id), function(err, body) {
+  var that = this, id = this.adaptId(id)
+  
+  if (!process.domain.couchdb) process.domain.couchdb = {}
+  
+  if (id in process.domain.couchdb)
+    return callback(null, process.domain.couchdb[id])
+  
+  this.db.get(id, function(err, body) {
     if (err) {
       switch (err.message) {
         case 'missing':
@@ -110,7 +116,7 @@ API.prototype.get = function(id, callback) {
       }
     }
 
-    callback(null, that.createModel(body._id, body, body._rev))
+    callback(null, process.domain.couchdb[id] = that.createModel(body._id, body, body._rev))
   })
 }
 
@@ -124,7 +130,13 @@ API.prototype.list = function(/*view, key, callback*/) {
   
   if (params === undefined)
     throw new Error('View ' + view + ' for ' + this.model._type + ' does not exsist')
+  
+  var id = [this.model._type, view, key].join('/')
+  if (!process.domain.couchdb) process.domain.couchdb = {}
 
+  if (id in process.domain.couchdb)
+    return callback(null, [].concat(process.domain.couchdb[id]))
+    
   if (key)       params.key = key
   if (!callback) callback = function() {}
   
@@ -143,7 +155,7 @@ API.prototype.list = function(/*view, key, callback*/) {
       var doc = data.value || data.doc
       rows.push(that.createModel(doc._id, doc, doc._rev))
     })
-    callback(null, rows)
+    callback(null, process.domain.couchdb[id] = rows)
   })
 }
 
@@ -156,11 +168,14 @@ API.prototype.put = function(instance, callback) {
   if (instance._attachments !== null)
     data._attachments = instance._attachments
   delete data.id
+  
+  if (!process.domain.couchdb) process.domain.couchdb = {}
+  
   this.db.insert(data, instance._id, function(err, res) {
     if (err) return callback(err, null)
     instance._rev  = res.rev
     instance.isNew = false
-    callback(null, instance)
+    callback(null, process.domain.couchdb[instance._id] = instance)
   })
 }
 
@@ -174,6 +189,8 @@ API.prototype.post = function(props, callback) {
   delete props.id
   props.$type = this.model._type
 
+  if (!process.domain.couchdb) process.domain.couchdb = {}
+
   var that = this
   this.db.insert(props, props._id, function(err, body) {
     if (err) return callback(err, null)
@@ -181,7 +198,7 @@ API.prototype.post = function(props, callback) {
     model._id = body.id
     model._rev = body.rev
     model.isNew = false
-    callback(null, model)
+    callback(null, process.domain.couchdb[model._id] = model)
   })
 }
 

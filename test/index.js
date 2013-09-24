@@ -180,9 +180,10 @@ describe('SWAC CouchDB Adapter', function() {
       })
     })
     it('should update the #_rev on PUT', function(done) {
+      var revOld = cur._rev
       model.put(cur._id, { key: 42 }, function(err, updated) {
         should.not.exist(err)
-        cur._rev.should.not.eql(updated._rev)
+        revOld.should.not.eql(updated._rev)
         db.get(cur._id, function(err, body) {
           should.not.exist(err)
           updated._rev.should.eql(body._rev)
