@@ -205,8 +205,10 @@ API.prototype.post = function(props, callback) {
 
 API.prototype.delete = function(instance, callback) {
   if (!callback) callback = function() {}
+  if (!process.domain.couchdb) process.domain.couchdb = {}
   this.db.destroy(instance._id, instance._rev, function(err) {
     if (err) return callback(err)
+    process.domain.couchdb[instance._id] = null
     callback(null)
   })
 }
