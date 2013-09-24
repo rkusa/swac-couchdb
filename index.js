@@ -84,6 +84,13 @@ API.prototype.adaptId = function(id) {
   return id
 }
 
+API.prototype.getCache = function() {
+  if (!process.domain.couchdb) process.domain.couchdb = { views: {}, models: {} }
+  var cache = process.domain.couchdb
+  if (!cache.views[this.model._type]) cache.views[this.model._type] = {}
+  return process.domain.couchdb
+}
+
 API.prototype.createModel = function(id, data, rev) {
   data.id               = this.extractId(id)
   var instance          = new this.model(data)
@@ -91,7 +98,7 @@ API.prototype.createModel = function(id, data, rev) {
   instance._rev         = rev
   instance._attachments = data._attachments
   instance.isNew        = false
-  return instance
+  return this.getCache().models[id] = instance
 }
 
 API.prototype.get = function(id, callback) {
@@ -100,23 +107,23 @@ API.prototype.get = function(id, callback) {
 
   var that = this, id = this.adaptId(id)
   
-  if (!process.domain.couchdb) process.domain.couchdb = {}
-  
-  if (id in process.domain.couchdb)
-    return callback(null, process.domain.couchdb[id])
+  var cache = this.getCache().models
+  if (id in cache) {
+    return callback(null, cache[id])
+  }
   
   this.db.get(id, function(err, body) {
     if (err) {
       switch (err.message) {
         case 'missing':
         case 'deleted':
-          return callback(null, null)
+          return callback(null, cache[id] = null)
         default:
           return callback(err, null)
       }
     }
 
-    callback(null, process.domain.couchdb[id] = that.createModel(body._id, body, body._rev))
+    callback(null, that.createModel(body._id, body, body._rev))
   })
 }
 
@@ -131,11 +138,11 @@ API.prototype.list = function(/*view, key, callback*/) {
   if (params === undefined)
     throw new Error('View ' + view + ' for ' + this.model._type + ' does not exsist')
   
-  var id = [this.model._type, view, key].join('/')
-  if (!process.domain.couchdb) process.domain.couchdb = {}
-
-  if (id in process.domain.couchdb)
-    return callback(null, [].concat(process.domain.couchdb[id]))
+  var id = [view, key].join('/')
+    , cache = this.getCache().views[this.model._type]
+  if (id in cache) {
+    return callback(null, [].concat(cache[id]))
+  }
     
   if (key)       params.key = key
   if (!callback) callback = function() {}
@@ -155,7 +162,7 @@ API.prototype.list = function(/*view, key, callback*/) {
       var doc = data.value || data.doc
       rows.push(that.createModel(doc._id, doc, doc._rev))
     })
-    callback(null, process.domain.couchdb[id] = rows)
+    callback(null, cache[id] = rows)
   })
 }
 
@@ -169,13 +176,13 @@ API.prototype.put = function(instance, callback) {
     data._attachments = instance._attachments
   delete data.id
   
-  if (!process.domain.couchdb) process.domain.couchdb = {}
+  var cache = this.getCache().models
   
   this.db.insert(data, instance._id, function(err, res) {
     if (err) return callback(err, null)
     instance._rev  = res.rev
     instance.isNew = false
-    callback(null, process.domain.couchdb[instance._id] = instance)
+    callback(null, cache[instance._id] = instance)
   })
 }
 
@@ -188,8 +195,8 @@ API.prototype.post = function(props, callback) {
   if (props.id) props._id = this.model._type + '/' + props.id
   delete props.id
   props.$type = this.model._type
-
-  if (!process.domain.couchdb) process.domain.couchdb = {}
+  
+  var cache = this.getCache()
 
   var that = this
   this.db.insert(props, props._id, function(err, body) {
@@ -198,17 +205,20 @@ API.prototype.post = function(props, callback) {
     model._id = body.id
     model._rev = body.rev
     model.isNew = false
-    callback(null, process.domain.couchdb[model._id] = model)
+    cache.views[that.model._type] = {}
+    callback(null, cache.models[model._id] = model)
   })
 }
 
 
 API.prototype.delete = function(instance, callback) {
   if (!callback) callback = function() {}
-  if (!process.domain.couchdb) process.domain.couchdb = {}
+  var cache = this.getCache(), that = this
+  
   this.db.destroy(instance._id, instance._rev, function(err) {
     if (err) return callback(err)
-    process.domain.couchdb[instance._id] = null
+    cache.models[instance._id] = null
+    cache.views[that.model._type] = {}
     callback(null)
   })
 }

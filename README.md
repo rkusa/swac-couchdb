@@ -3,7 +3,7 @@
 
 ```json
 { "name": "swac-couchdb",
-  "version": "0.5.0" }
+  "version": "0.5.1" }
 ```
 
 **Status:** Don't use yet.
