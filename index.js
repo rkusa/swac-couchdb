@@ -15,6 +15,14 @@ var API = function(db, model, define, callback) {
     }
   }
   if (define) define.call(this)
+
+  var cloneFn = this.model.prototype.clone
+  this.model.prototype.clone = function() {
+    var clone = cloneFn.call(this)
+    clone._rev = this._rev
+    clone._id  = this._id
+    return clone
+  }
 }
 
 API.prototype.initialize = function() {
@@ -84,13 +92,6 @@ API.prototype.adaptId = function(id) {
   return id
 }
 
-API.prototype.getCache = function() {
-  if (!process.domain.couchdb) process.domain.couchdb = { views: {}, models: {} }
-  var cache = process.domain.couchdb
-  if (!cache.views[this.model._type]) cache.views[this.model._type] = {}
-  return process.domain.couchdb
-}
-
 API.prototype.createModel = function(id, data, rev) {
   data.id               = this.extractId(id)
   var instance          = new this.model(data)
@@ -98,7 +99,7 @@ API.prototype.createModel = function(id, data, rev) {
   instance._rev         = rev
   instance._attachments = data._attachments
   instance.isNew        = false
-  return this.getCache().models[id] = instance
+  return instance
 }
 
 API.prototype.get = function(id, callback) {
@@ -106,18 +107,12 @@ API.prototype.get = function(id, callback) {
   if (!id) return callback(null, null)
 
   var that = this, id = this.adaptId(id)
-  
-  var cache = this.getCache().models
-  if (id in cache) {
-    return callback(null, cache[id])
-  }
-  
   this.db.get(id, function(err, body) {
     if (err) {
       switch (err.message) {
         case 'missing':
         case 'deleted':
-          return callback(null, cache[id] = null)
+          return callback(null, null)
         default:
           return callback(err, null)
       }
@@ -138,12 +133,6 @@ API.prototype.view = function(/*view, key, query, callback*/) {
   
   if (params === undefined)
     throw new Error('View ' + view + ' for ' + this.model._type + ' does not exsist')
-  
-  var id = [view, key].join('/')
-    , cache = this.getCache().views[this.model._type]
-  if (id in cache) {
-    return callback(null, [].concat(cache[id]))
-  }
     
   if (key)       params.key = key
   if (!callback) callback = function() {}
@@ -163,7 +152,7 @@ API.prototype.view = function(/*view, key, query, callback*/) {
       var doc = data.value || data.doc
       rows.push(that.createModel(doc._id, doc, doc._rev))
     })
-    callback(null, cache[id] = rows)
+    callback(null, rows)
   })
 }
 
@@ -177,13 +166,11 @@ API.prototype.put = function(instance, callback) {
     data._attachments = instance._attachments
   delete data.id
   
-  var cache = this.getCache().models
-  
   this.db.insert(data, instance._id, function(err, res) {
     if (err) return callback(err, null)
     instance._rev  = res.rev
     instance.isNew = false
-    callback(null, cache[instance._id] = instance)
+    callback(null, instance)
   })
 }
 
@@ -196,8 +183,6 @@ API.prototype.post = function(props, callback) {
   if (props.id) props._id = this.model._type + '/' + props.id
   delete props.id
   props.$type = this.model._type
-  
-  var cache = this.getCache()
 
   var that = this
   this.db.insert(props, props._id, function(err, body) {
@@ -206,20 +191,16 @@ API.prototype.post = function(props, callback) {
     model._id = body.id
     model._rev = body.rev
     model.isNew = false
-    cache.views[that.model._type] = {}
-    callback(null, cache.models[model._id] = model)
+    callback(null, model)
   })
 }
 
 
 API.prototype.delete = function(instance, callback) {
   if (!callback) callback = function() {}
-  var cache = this.getCache(), that = this
   
   this.db.destroy(instance._id, instance._rev, function(err) {
     if (err) return callback(err)
-    cache.models[instance._id] = null
-    cache.views[that.model._type] = {}
     callback(null)
   })
 }

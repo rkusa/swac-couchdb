@@ -3,15 +3,12 @@ var swac = require('swac')
   , nano     = require('nano')('http://localhost:5984')
   , db, model
 
-var domain = require('domain')
+before(function() {
+  var domain = require('domain')
   , d = domain.create()
-d.req = {}
-
-var domainify = function(fn) {
-  return function(done) {
-    d.run(fn.bind(null, done))
-  }
-}
+  d.req = {}
+  d.enter()
+})
 
 describe('SWAC CouchDB Adapter', function() {
   var view = function(doc) {
@@ -52,7 +49,7 @@ describe('SWAC CouchDB Adapter', function() {
   })
   describe('CRUD', function() {
     var cur
-    it('POST should work', domainify(function(done) {
+    it('POST should work', function(done) {
       model.post({ key: '1', type: 'a' }, function(err, row) {
         should.not.exist(err)
         cur = row
@@ -63,8 +60,8 @@ describe('SWAC CouchDB Adapter', function() {
           done()
         })
       })
-    }))
-    it('PUT should work', domainify(function(done) {
+    })
+    it('PUT should work', function(done) {
       cur.key = 2
       cur.type = 'b'
       model.put(cur.id, cur, function(err, row) {
@@ -76,8 +73,8 @@ describe('SWAC CouchDB Adapter', function() {
           done()
         })
       })
-    }))
-    it('GET should work', domainify(function(done) {
+    })
+    it('GET should work', function(done) {
       model.get(cur.id, function(err, body) {
         should.not.exist(err)
         body.id.should.equal(cur.id)
@@ -85,8 +82,8 @@ describe('SWAC CouchDB Adapter', function() {
         body.type.should.equal(cur.type)
         done()
       })
-    }))
-    it('LIST should work', domainify(function(done) {
+    })
+    it('LIST should work', function(done) {
       model.post({ key: '1', type: 'a' }, function(err, row) {
         should.not.exist(err)
         model.list(function(err, items) {
@@ -95,7 +92,7 @@ describe('SWAC CouchDB Adapter', function() {
           done()
         })
       })
-    }))
+    })
   })
   describe('Views', function() {
     it('should be created', function(done) {
@@ -106,21 +103,21 @@ describe('SWAC CouchDB Adapter', function() {
         done()
       })
     })
-    it('should work', domainify(function(done) {
+    it('should work', function(done) {
       model.list('by-key', 2, function(err, items) {
         should.not.exist(err)
         items.should.have.lengthOf(1)
         done()
       })
-    }))
-    it('should work with function type views', domainify(function(done) {
+    })
+    it('should work with function type views', function(done) {
       model.list('by-fn', 42, function(err, res) {
         res.should.have.lengthOf(2)
         res[0].should.eql(42)
         res[1].should.eql(d.req)
         done()
       })
-    }))
+    })
   })
   describe('CouchDB Document Id', function() {
     var cur
