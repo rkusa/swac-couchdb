@@ -21,7 +21,7 @@ API.prototype.initialize = function() {
   if (this.queue.length > 0) (this.queue.shift())()
 }
 
-API.prototype.view = function(name, view) {
+API.prototype.defineView = function(name, view) {
   var that = this
 
   this.params[name] = {}
@@ -127,10 +127,11 @@ API.prototype.get = function(id, callback) {
   })
 }
 
-API.prototype.list = function(/*view, key, callback*/) {
+API.prototype.view = function(/*view, key, query, callback*/) {
   var args = Array.prototype.slice.call(arguments)
     , that = this
     , callback = args.pop()
+    , query = typeof args[args.length - 1] === 'object' ? args.pop() : {}
     , view = args.shift() || 'all'
     , key = args.shift() || null
     , params = this.params[view]
@@ -227,7 +228,7 @@ exports.initialize = function(model, opts, define, callback) {
   var db = nano.use(opts.db)
     , api = new API(db, model, define, callback)
 
-  api.view('all', {
+  api.defineView('all', {
     map: "function (doc) { if(doc.$type === '" + model._type + "') emit(doc._id, null); }"
   })
   
