@@ -15,7 +15,7 @@
   "devDependencies": {
     "mocha": "1.13.x",
     "should": "1.3.x",
-    "swac": "0.8.x"
+    "swac-odm": "0.1.x"
   },
   "bugs": "https://github.com/rkusa/swac-couchdb/issues",
   "repository" : {

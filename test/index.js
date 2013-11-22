@@ -1,11 +1,11 @@
-var swac = require('swac')
-  , should   = require('should')
-  , nano     = require('nano')('http://localhost:5984')
+var odm    = require('swac-odm')
+  , should = require('should')
+  , nano   = require('nano')('http://localhost:5984')
   , db, model
 
 before(function() {
   var domain = require('domain')
-  , d = domain.create()
+    , d = domain.create()
   d.req = {}
   d.enter()
 })
@@ -26,17 +26,18 @@ describe('SWAC CouchDB Adapter', function() {
   })
   describe('Model Definition', function() {
     before(function(done) {
-      model = swac.Model.define('TestModel', function() {
+      model = odm.Model.define('TestModel', function() {
         this.use(require('../'), { db: 'swac-couchdb-test' }, function() {
-          this.view('by-key', {
-            map: view
-          })
-          this.view('by-fn', function(key, req, callback) {
+          this.defineView('byKey', { map: view })
+          this.defineView('byFn', function(key, req, callback) {
             callback(null, [key, req])
           })
         })
         this.property('key')
         this.property('type')
+
+        this.registerView('byKey')
+        this.registerView('byFn')
       }, done)
     })
     it('should create a _design document', function(done) {
@@ -86,7 +87,7 @@ describe('SWAC CouchDB Adapter', function() {
     it('LIST should work', function(done) {
       model.post({ key: '1', type: 'a' }, function(err, row) {
         should.not.exist(err)
-        model.list(function(err, items) {
+        model.all(function(err, items) {
           if (err) throw err
           items.should.have.lengthOf(2)
           done()
@@ -98,23 +99,23 @@ describe('SWAC CouchDB Adapter', function() {
     it('should be created', function(done) {
       db.get('_design/TestModel', function(err, body) {
         should.not.exist(err)
-        body.views.should.have.property('by-key')
-        body.views['by-key'].map.should.equal(view.toString())
+        body.views.should.have.property('byKey')
+        body.views['byKey'].map.should.equal(view.toString())
         done()
       })
     })
     it('should work', function(done) {
-      model.list('by-key', 2, function(err, items) {
+      model.byKey(2, function(err, items) {
         should.not.exist(err)
         items.should.have.lengthOf(1)
         done()
       })
     })
     it('should work with function type views', function(done) {
-      model.list('by-fn', 42, function(err, res) {
+      model.byFn(42, function(err, res) {
         res.should.have.lengthOf(2)
         res[0].should.eql(42)
-        res[1].should.eql(d.req)
+        res[1].should.eql(process.domain.req)
         done()
       })
     })
@@ -168,7 +169,7 @@ describe('SWAC CouchDB Adapter', function() {
       })
     })
     it('should set the #_rev on LIST', function(done) {
-      model.list(function(err, rows) {
+      model.all(function(err, rows) {
         should.not.exist(err)
         rows.forEach(function(row) {
           row.should.have.property('_rev')
