@@ -41,7 +41,7 @@ API.prototype.defineView = function(name, view) {
   } else {
     if (!view.reduce) this.params[name].include_docs = true
     else this.params[name].reduce = true
-    this.queue.push(function() {
+    this.queue.push(function insert() {
       that.db.get(that.design, function(err, body) {
         if (err) {
           if (err.status_code !== 404) throw err
@@ -52,6 +52,7 @@ API.prototype.defineView = function(name, view) {
             }
           }
         }
+        if (!('views' in body)) return that.queue.push(insert)
         body.views[name] = !view.map ? { map: view } : view
         that.db.insert(body, that.design, that.callback.bind(that))
       })
