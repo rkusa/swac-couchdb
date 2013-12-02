@@ -49,6 +49,9 @@ describe('SWAC CouchDB Adapter', function() {
     })
   })
   describe('CRUD', function() {
+    beforeEach(function() {
+      delete process.domain.swac
+    })
     var cur
     it('POST should work', function(done) {
       model.post({ key: '1', type: 'a' }, function(err, row) {

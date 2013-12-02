@@ -7,6 +7,7 @@ var API = function(db, model, define, callback) {
   this.queue  = []
   this.views  = {}
   this.params = {}
+  this.viewInserted = false
   this.callback = function() {
     if (this.queue.length === 0) {
       if (callback) callback()
@@ -52,7 +53,12 @@ API.prototype.defineView = function(name, view) {
             }
           }
         }
-        if (!('views' in body)) return that.queue.push(insert)
+        if (that.viewInserted && !('views' in body)) {
+          that.queue.push(insert)
+          return that.callback.call(that)
+        }
+        that.viewInserted = true
+        if (!body.views) body.views = {}
         body.views[name] = !view.map ? { map: view } : view
         that.db.insert(body, that.design, that.callback.bind(that))
       })
@@ -99,7 +105,6 @@ API.prototype.createModel = function(id, data, rev) {
   instance._id          = id
   instance._rev         = rev
   instance._attachments = data._attachments
-  instance.isNew        = false
   return instance
 }
 
@@ -170,7 +175,6 @@ API.prototype.put = function(instance, callback) {
   this.db.insert(data, instance._id, function(err, res) {
     if (err) return callback(err, null)
     instance._rev  = res.rev
-    instance.isNew = false
     callback(null, instance)
   })
 }
@@ -191,7 +195,6 @@ API.prototype.post = function(props, callback) {
     if (!model.id) model.id = body.id
     model._id = body.id
     model._rev = body.rev
-    model.isNew = false
     callback(null, model)
   })
 }

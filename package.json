@@ -21,5 +21,8 @@
   "repository" : {
     "type": "git",
     "url": "git://github.com/rkusa/swac-couchdb.git"
+  },
+  "engines": {
+    "node": ">=0.8"
   }
 }
